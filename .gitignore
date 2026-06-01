@@ -1,0 +1,23 @@
+# Keil/MDK build outputs
+MDK-ARM/001/
+MDK-ARM/**/*.o
+MDK-ARM/**/*.d
+MDK-ARM/**/*.crf
+MDK-ARM/**/*.lst
+MDK-ARM/**/*.map
+MDK-ARM/**/*.lnp
+MDK-ARM/**/*.axf
+MDK-ARM/**/*.hex
+MDK-ARM/**/*.htm
+MDK-ARM/**/*.dep
+MDK-ARM/**/*.iex
+MDK-ARM/**/*.Bak
+
+# User-local IDE files
+MDK-ARM/*.uvguix.*
+
+# OS/editor noise
+Thumbs.db
+.DS_Store
+*.swp
+*.tmp
