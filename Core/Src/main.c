@@ -33,11 +33,11 @@
 /* USER CODE BEGIN PTD */
 typedef struct step_ctrl_t
 {
-    int s;     // åŠ é€Ÿè¿‡ç¨‹éœ€è¦çš„æ­¥æ•°
-    int i;     // å½“å‰æ­¥
-    int steps; // æ­¥æ•°
-    float vi;  // å½“å‰é€Ÿåº¦
-    float a;   // åŠ é€Ÿåº¦ï¼ˆè„‰å†²/s2ï¼‰
+    int s;     // ¼ÓËÙ¹ı³ÌĞèÒªµÄ²½Êı
+    int i;     // µ±Ç°²½
+    int steps; // ²½Êı
+    float vi;  // µ±Ç°ËÙ¶È
+    float a;   // ¼ÓËÙ¶È£¨Âö³å/s2£©
     uint dir;
 } step_ctrl;
 
@@ -55,14 +55,14 @@ typedef struct stepper_channel_t
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-// å…¨å±€å˜é‡
+// È«¾Ö±äÁ¿
 float speed_factor = 0.1f;
 float accel_factor = 0.2f;
 int finger_pos[2];
 int exit_debug_mode = 0;
 g_config cfg;
-// flag0~3 å’Œ allow åœ¨å®šæ—¶å™¨ä¸­æ–­é‡Œä¿®æ”¹ã€åœ¨ä¸»å¾ªç¯é‡Œè½®è¯¢ï¼Œå¿…é¡»æ˜¯ volatileï¼Œ
-// å¦åˆ™ -O3 ä¸‹ stepper_wait_all_done() åªè¯»ä¸€æ¬¡æ ‡å¿—ä½ï¼Œç¬¬ä¸€æ¬¡é˜»å¡è¿åŠ¨å°±ä¼šæ­»å¾ªç¯ã€‚
+// flag0~3 ºÍ allow ÔÚ¶¨Ê±Æ÷ÖĞ¶ÏÀïĞŞ¸Ä¡¢ÔÚÖ÷Ñ­»·ÀïÂÖÑ¯£¬±ØĞëÊÇ volatile£¬
+// ·ñÔò -O3 ÏÂ stepper_wait_all_done() Ö»¶ÁÒ»´Î±êÖ¾Î»£¬µÚÒ»´Î×èÈûÔË¶¯¾Í»áËÀÑ­»·¡£
 volatile int flag0;
 volatile int flag1;
 volatile int flag2;
@@ -77,7 +77,7 @@ volatile int allow[4] = {0, 0, 0, 0};
 static step_ctrl stepper_ctrl[4] = {0};
 
 ///////////////////////////////////////////////////////////////////////////////////
-// ------------------------------ è§£æé­”æ–¹è¿˜åŸæ­¥éª¤ ------------------------------- //
+// ------------------------------ ½âÎöÄ§·½»¹Ô­²½Öè ------------------------------- //
 ///////////////////////////////////////////////////////////////////////////////////
 
 enum cube_stat {
@@ -109,7 +109,7 @@ enum cube_twist {
 };
             
 // orig|90,LEFT,CW|180,LEFT|90,LEFT,CCW|90,RIGHT,CW|180,RIGHT|90,RIGHT,CCW
-// ä½¿ç”¨cube_table.pyè‡ªåŠ¨ç”Ÿæˆ
+// Ê¹ÓÃcube_table.py×Ô¶¯Éú³É
 const char cube_status_tab[24][6]={
     // 90,LEFT,CW|180,LEFT|90,LEFT,CCW|90,RIGHT,CW|180,RIGHT|90,RIGHT,CCW
     {STAT_DL, STAT_DB, STAT_DR, STAT_RF, STAT_UF, STAT_LF}, // flip from STAT_DF
@@ -138,22 +138,22 @@ const char cube_status_tab[24][6]={
     {STAT_RB, STAT_RU, STAT_RF, STAT_FD, STAT_LD, STAT_BD}, // flip from STAT_RD
 };
 
-// a: éœ€è¦è¿›è¡Œçš„æ“ä½œï¼Œå–å€¼èŒƒå›´å¦‚ä¸‹
+// a: ĞèÒª½øĞĞµÄ²Ù×÷£¬È¡Öµ·¶Î§ÈçÏÂ
 // "U", "R", "F", "D", "L", "B"
 // "U'", "R'", "F'", "D'", "L'", "B'"
 // "U2", "R2", "F2", "D2", "L2", "B2"
-// stat: é­”æ–¹çš„æœå‘ï¼Œå–å€¼èŒƒå›´å¦‚ä¸‹(0-23)
+// stat: Ä§·½µÄ³¯Ïò£¬È¡Öµ·¶Î§ÈçÏÂ(0-23)
 //    STAT_DF,STAT_DB, STAT_DL, STAT_DR,
 //    STAT_UF, STAT_UB, STAT_UL, STAT_UR,
 //    STAT_FL, STAT_FR, STAT_FU, STAT_FD,
 //    STAT_BL, STAT_BR, STAT_BU, STAT_BD,
 //    STAT_LF, STAT_LB, STAT_LU, STAT_LD,
 //    STAT_RF, STAT_RB, STAT_RU, STAT_RD,
-// last_lr: æœ€åç§»åŠ¨è¿‡çš„æœºæ¢°è‡‚ï¼Œä¸‹æ¬¡æ“ä½œæ—¶ï¼Œä¼šå°½é‡é€‰æ‹©åŒä¾§çš„
+// last_lr: ×îºóÒÆ¶¯¹ıµÄ»úĞµ±Û£¬ÏÂ´Î²Ù×÷Ê±£¬»á¾¡Á¿Ñ¡ÔñÍ¬²àµÄ
 // LEFT  0
 // RIGHT 1
 
-// è¿”å›å€¼ï¼šé­”æ–¹çš„æœå‘ï¼Œå–å€¼èŒƒå›´å’Œstatä¸€æ ·
+// ·µ»ØÖµ£ºÄ§·½µÄ³¯Ïò£¬È¡Öµ·¶Î§ºÍstatÒ»Ñù
 static int cube_tweak(int stat, const char *a, int *last_lr, char *flip_twist)
 {
     int lr = LEFT;
@@ -172,25 +172,25 @@ static int cube_tweak(int stat, const char *a, int *last_lr, char *flip_twist)
     {
         if(cube_face_code[face] == a[0])
         {
-            // å°†å–å€¼èŒƒå›´0-23çš„statè½¬ä¸ºcube_stat_decodeä¸­æè¿°çš„å½¢å¼ï¼Œæ–¹ä¾¿åˆ¤æ–­å¯æ“ä½œçš„é¢
+            // ½«È¡Öµ·¶Î§0-23µÄstat×ªÎªcube_stat_decodeÖĞÃèÊöµÄĞÎÊ½£¬·½±ãÅĞ¶Ï¿É²Ù×÷µÄÃæ
             char stat_decode = cube_stat_decode[stat];
             //printf("action == %c%c, status == %c%c\n", a[0], a[1], cube_face_code[stat_decode>>4], cube_face_code[stat_decode&0x0f]);
             if((stat_decode & 0xF0) == (face << 4))
             {
-                // æ‹§å·¦è¾¹
+                // Å¡×ó±ß
                 lr = LEFT;
             }
             else if((stat_decode & 0x0F) == face)
             {
-                // æ‹§å³è¾¹
+                // Å¡ÓÒ±ß
                 lr = RIGHT;
             }
             else
             {
-                // éœ€è¦è°ƒæ•´é­”æ–¹æ–¹å‘
+                // ĞèÒªµ÷ÕûÄ§·½·½Ïò
                 int start, end, add, i;
-                // last_lr: æœ€åç§»åŠ¨è¿‡çš„æœºæ¢°è‡‚ï¼Œç¿»è½¬é­”æ–¹æ“ä½œæ—¶ï¼Œå°½é‡é€‰æ‹©åŒä¾§çš„æœºæ¢°è‡‚
-                // å’Œä¸Šæ¬¡åŠ¨ä½œåŒä¸º90åº¦æ—¶ï¼Œå¯ä»¥èŠ‚çœä¸€äº›æ“ä½œæ­¥éª¤
+                // last_lr: ×îºóÒÆ¶¯¹ıµÄ»úĞµ±Û£¬·­×ªÄ§·½²Ù×÷Ê±£¬¾¡Á¿Ñ¡ÔñÍ¬²àµÄ»úĞµ±Û
+                // ºÍÉÏ´Î¶¯×÷Í¬Îª90¶ÈÊ±£¬¿ÉÒÔ½ÚÊ¡Ò»Ğ©²Ù×÷²½Öè
                 if(*last_lr == LEFT)
                 {
                     start = 0;
@@ -227,7 +227,7 @@ static int cube_tweak(int stat, const char *a, int *last_lr, char *flip_twist)
         }
     }
     *last_lr = lr;
-    // æ‹§é­”æ–¹
+    // Å¡Ä§·½
     if('\'' == a[1])
     {
         if(LEFT == lr){
@@ -257,13 +257,13 @@ static int cube_tweak(int stat, const char *a, int *last_lr, char *flip_twist)
     return stat;
 };
 
-// æŒ‰ç…§æ±‚è§£ç»“æœæ‰§è¡ŒåŠ¨ä½œ
+// °´ÕÕÇó½â½á¹ûÖ´ĞĞ¶¯×÷
 static int cube_tweak_str(int stat, const char *str)
 {
     const int MAX_STEP = 25;
     const char *p = str;
-    int count = 0;// æ­¥éª¤æ•°é‡
-    int last_lr = LEFT; // æœ€åç§»åŠ¨è¿‡çš„æœºæ¢°è‡‚ï¼Œä¸‹æ¬¡æ“ä½œæ—¶ï¼Œä¼šå°½é‡é€‰æ‹©åŒä¾§çš„
+    int count = 0;// ²½ÖèÊıÁ¿
+    int last_lr = LEFT; // ×îºóÒÆ¶¯¹ıµÄ»úĞµ±Û£¬ÏÂ´Î²Ù×÷Ê±£¬»á¾¡Á¿Ñ¡ÔñÍ¬²àµÄ
     char motion_table[MAX_STEP][2];// {flip, twist}
     while(1)
     {
@@ -301,12 +301,12 @@ static int cube_tweak_str(int stat, const char *str)
     for(int i=0; i<count; i++)
     {
         //printf("count = %d\n", i);
-        // ç¿»è½¬é­”æ–¹åŠ¨ä½œçš„ç¼–å·ï¼Œä¾‹å¦‚FLIP_90_LEFT_CW
+        // ·­×ªÄ§·½¶¯×÷µÄ±àºÅ£¬ÀıÈçFLIP_90_LEFT_CW
         int flip = motion_table[i][0] & 0x0F;
-        // æ‹§é­”æ–¹åŠ¨ä½œçš„ç¼–å·ï¼Œä¾‹å¦‚TWIST_90_LEFT_CW
+        // Å¡Ä§·½¶¯×÷µÄ±àºÅ£¬ÀıÈçTWIST_90_LEFT_CW
         int twist = motion_table[i][1] & 0x0F;
-        // å¦‚æœå¯ä»¥è·³è¿‡æ‰‹æŒ‡å¼ å¼€ï¼Œæœºæ¢°è‡‚æ—‹è½¬90åº¦å›é›¶çš„åŠ¨ä½œï¼Œå–å€¼16
-        // å¦‚æœä¸èƒ½ï¼Œå–å€¼0
+        // Èç¹û¿ÉÒÔÌø¹ıÊÖÖ¸ÕÅ¿ª£¬»úĞµ±ÛĞı×ª90¶È»ØÁãµÄ¶¯×÷£¬È¡Öµ16
+        // Èç¹û²»ÄÜ£¬È¡Öµ0
         int flip_skip_back_step = motion_table[i][0] & 0x10;
         int twist_skip_back_step = motion_table[i][1] & 0x10;
         switch(flip)
@@ -360,7 +360,7 @@ static int cube_tweak_str(int stat, const char *str)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
-// ---------------------------------- è„‰å†²æ§åˆ¶ ---------------------------------- //
+// ---------------------------------- Âö³å¿ØÖÆ ---------------------------------- //
 ///////////////////////////////////////////////////////////////////////////////////
 
 static stepper_channel stepper_channels[4] = {
@@ -432,9 +432,9 @@ static void stepper_wait_all_done(void)
     {
     }
 }
-// ç”µæœºåŠ é€Ÿæ§åˆ¶
-// gpio_mask 1<<GPIOç¼–å· stepsï¼šæ­¥æ•°ï¼Œv0ï¼šåˆå§‹é€Ÿåº¦ï¼ˆè„‰å†²/sï¼‰ï¼Œvï¼šæœ€é«˜é€Ÿåº¦ï¼ˆè„‰å†²/sï¼‰ï¼Œaï¼šåŠ é€Ÿåº¦ï¼ˆè„‰å†²/s2ï¼‰
-// stepså¯ä»¥ä¸ºæ­£æ•°æˆ–è€…è´Ÿæ•°ï¼Œç¬¦å·è¡¨ç¤ºæ–¹å‘ï¼Œä½†æ˜¯ä¸èƒ½ä¸º0
+// µç»ú¼ÓËÙ¿ØÖÆ
+// gpio_mask 1<<GPIO±àºÅ steps£º²½Êı£¬v0£º³õÊ¼ËÙ¶È£¨Âö³å/s£©£¬v£º×î¸ßËÙ¶È£¨Âö³å/s£©£¬a£º¼ÓËÙ¶È£¨Âö³å/s2£©
+// steps¿ÉÒÔÎªÕıÊı»òÕß¸ºÊı£¬·ûºÅ±íÊ¾·½Ïò£¬µ«ÊÇ²»ÄÜÎª0
 static void stepper_move(int sm, int steps, float v0, float v, float a)
 {
     if(!stepper_is_valid(sm))
@@ -457,14 +457,14 @@ static void stepper_move(int sm, int steps, float v0, float v, float a)
 
     p_step_ctrl->vi = v0 * speed_factor;
     p_step_ctrl->a = a * accel_factor;
-    p_step_ctrl->s = (int)roundf((v * v - v0 * v0) / (2 * a)); // è®¡ç®—åŠ é€Ÿè¿‡ç¨‹éœ€è¦çš„æ­¥æ•°
+    p_step_ctrl->s = (int)roundf((v * v - v0 * v0) / (2 * a)); // ¼ÆËã¼ÓËÙ¹ı³ÌĞèÒªµÄ²½Êı
     p_step_ctrl->i = 0;
     test1 = sm;
 
     stepper_start_channel(sm);
 }
 
-// ç­‰å¾…ç”µæœºæ§åˆ¶æŒ‡ä»¤æ‰§è¡Œå®Œæ¯•
+// µÈ´ıµç»ú¿ØÖÆÖ¸ÁîÖ´ĞĞÍê±Ï
 static void stepper_move_block(int sm, int steps, float v0, float v, float a)
 {
     stepper_mark_busy(sm);
@@ -544,7 +544,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     }
 }
 ///////////////////////////////////////////////////////////////////////////////////
-// ---------------------------------- è¿åŠ¨æ§åˆ¶ ---------------------------------- //
+// ---------------------------------- ÔË¶¯¿ØÖÆ ---------------------------------- //
 ///////////////////////////////////////////////////////////////////////////////////
 
 //void zero_point(void)
@@ -552,7 +552,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 //    
 //     HAL_Delay(100); 
 //    // stepper 2
-//    stepper_move      (0, 1, cfg.SPEED_HOME, cfg.SPEED_HOME, cfg.ACCEL_HOME);// ç§»åŠ¨ä¸€æ­¥ï¼Œç”±HOLDåˆ°RUNç”µæµ
+//    stepper_move      (0, 1, cfg.SPEED_HOME, cfg.SPEED_HOME, cfg.ACCEL_HOME);// ÒÆ¶¯Ò»²½£¬ÓÉHOLDµ½RUNµçÁ÷
 //    int step = 0;
 //    for (int i = 0; ;i++)
 //    {
@@ -604,7 +604,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 //    stepper_move      (0, cfg.ARM_OFFSET, cfg.SPEED_HOME, cfg.SPEED_HOME, cfg.ACCEL_HOME);
 //    stepper_move_block(2, cfg.ARM_OFFSET, cfg.SPEED_HOME, cfg.SPEED_HOME, cfg.ACCEL_HOME);
 //    // stepper 3
-//    stepper_move      (1, 1, cfg.SPEED_HOME, cfg.SPEED_HOME, cfg.ACCEL_HOME);// ç§»åŠ¨ä¸€æ­¥ï¼Œç”±HOLDåˆ°RUNç”µæµ
+//    stepper_move      (1, 1, cfg.SPEED_HOME, cfg.SPEED_HOME, cfg.ACCEL_HOME);// ÒÆ¶¯Ò»²½£¬ÓÉHOLDµ½RUNµçÁ÷
 //    step = 0;
 //    for (int i = 0; ;i++)
 //    {
@@ -680,7 +680,7 @@ void move_arm(int lr, int step, float v0, float v, float a)
     stepper_move(lr, step, v0, v, a);
     stepper_move(lr + 2, step, v0, v, a);
 }
-// å¤¹ç´§é­”æ–¹
+// ¼Ğ½ôÄ§·½
 void move_finger_to_default(void)
 {
     move_finger      (LEFT, cfg.FINGER_OFFSET_SPIN, cfg.SPEED_HOME, cfg.SPEED_LOW, cfg.ACCEL_HOME);
@@ -691,7 +691,7 @@ void move_finger_to_lock(void)
     move_finger      (LEFT, cfg.FINGER_OFFSET_LOCK, cfg.SPEED_HOME, cfg.SPEED_LOW, cfg.ACCEL_HOME);
     move_finger_block(RIGHT, cfg.FINGER_OFFSET_LOCK, cfg.SPEED_HOME, cfg.SPEED_LOW, cfg.ACCEL_HOME);
 }
-// æ¾å¼€é­”æ–¹
+// ËÉ¿ªÄ§·½
 void move_finger_to_init(void)
 {
     move_finger      (LEFT, cfg.FINGER_OFFSET_INIT, cfg.SPEED_HOME, cfg.SPEED_LOW, cfg.ACCEL_HOME);
@@ -703,7 +703,7 @@ void move_finger_to_max(void)
     move_finger_block(RIGHT, cfg.FINGER_OFFSET_MAX, cfg.SPEED_HOME, cfg.SPEED_LOW, cfg.ACCEL_HOME);
 }
 
-//// åå¤ç§»åŠ¨æ‰‹æŒ‡ï¼Œæ”¹å–„æ¶¦æ»‘çŠ¶æ€
+//// ·´¸´ÒÆ¶¯ÊÖÖ¸£¬¸ÄÉÆÈó»¬×´Ì¬
 //static void move_finger_repetition()
 //{
 //    for(int i=0;i<3; i++)
@@ -721,69 +721,69 @@ void move_finger_to_max(void)
 //        move_arm_block(RIGHT, 1600, cfg.V_START_ARM_L, cfg.V_MAX_ARM_L, cfg.A_MAX_ARM_L);
 //    }
 //}
-// æ‹§180åº¦
+// Å¡180¶È
 // twist_cube_180(LEFT); or twist_cube_180(RIGHT);
 void twist_cube_180(int lr)
 {
     move_arm_block(lr, 200, cfg.V_START_ARM_L, cfg.V_MAX_ARM_L, cfg.A_MAX_ARM_L);
 }
-// æ‹§90åº¦
+// Å¡90¶È
 void twist_cube_90(int lr, int cw_ccw, int skip_back_step)
 {
     int dir = cw_ccw ? -1 : 1;
-    // è½¬90åº¦ 
+    // ×ª90¶È 
     move_arm_block(lr, dir * 100, cfg.V_START_ARM_L, cfg.V_MAX_ARM_L, cfg.A_MAX_ARM_L);
     if(!skip_back_step)
     {
-        // å¯¹ä¾§æ‰‹æŒ‡é”ç´§
+        // ¶Ô²àÊÖÖ¸Ëø½ô
         move_finger_block(!lr, cfg.FINGER_OFFSET_LOCK, cfg.V_START_FINGER, cfg.V_MAX_FINGER, cfg.A_MAX_FINGER);
          HAL_Delay(cfg.DELAY_US_AFTER_FINGER_LOCK);
-        // æ‰‹æŒ‡æ¾å¼€
+        // ÊÖÖ¸ËÉ¿ª
         move_finger_block(lr, cfg.FINGER_OFFSET_MAX, cfg.V_START_FINGER, cfg.V_MAX_FINGER, cfg.A_MAX_FINGER);
-        // è½¬90åº¦
+        // ×ª90¶È
         move_arm_block(lr, dir * 100, cfg.V_START_ARM, cfg.V_MAX_ARM, cfg.A_MAX_ARM);
-        // æ‰‹æŒ‡ç¼©å›
+        // ÊÖÖ¸Ëõ»Ø
         move_finger_block(lr, cfg.FINGER_OFFSET_SPIN, cfg.V_START_FINGER, cfg.V_MAX_FINGER, cfg.A_MAX_FINGER);
-        // å¯¹ä¾§æ‰‹æŒ‡ç¼©å›
+        // ¶Ô²àÊÖÖ¸Ëõ»Ø
         move_finger_block(!lr, cfg.FINGER_OFFSET_SPIN, cfg.V_START_FINGER, cfg.V_MAX_FINGER, cfg.A_MAX_FINGER);
     }
 }
 void flip_cube_180(int lr)
 {
-    // æ‰‹æŒ‡é”ç´§
+    // ÊÖÖ¸Ëø½ô
     move_finger_block(lr, cfg.FINGER_OFFSET_LOCK, cfg.V_START_FINGER, cfg.V_MAX_FINGER, cfg.A_MAX_FINGER);
     HAL_Delay(cfg.DELAY_US_AFTER_FINGER_LOCK);
-    // å¯¹ä¾§æ‰‹æŒ‡ç¼©å›
+    // ¶Ô²àÊÖÖ¸Ëõ»Ø
     move_finger_block(!lr, cfg.FINGER_OFFSET_MAX, cfg.V_START_FINGER, cfg.V_MAX_FINGER, cfg.A_MAX_FINGER);
-    // è½¬180
+    // ×ª180
     move_arm_block(lr, 200, cfg.V_START_ARM_L, cfg.V_MAX_ARM_L, cfg.A_MAX_ARM_L);
-    // æ‰‹æŒ‡å½’ä½
+    // ÊÖÖ¸¹éÎ»
     move_finger_block(!lr, cfg.FINGER_OFFSET_SPIN, cfg.V_START_FINGER, cfg.V_MAX_FINGER, cfg.A_MAX_FINGER);
     move_finger_block(lr, cfg.FINGER_OFFSET_SPIN, cfg.V_START_FINGER, cfg.V_MAX_FINGER, cfg.A_MAX_FINGER);
 }
 void flip_cube_90(int lr, int cw_ccw, int skip_back_step)
 {
     int dir = cw_ccw ? -1 : 1;
-    // æ‰‹æŒ‡é”ç´§
+    // ÊÖÖ¸Ëø½ô
     move_finger_block(lr, cfg.FINGER_OFFSET_LOCK, cfg.V_START_FINGER, cfg.V_MAX_FINGER, cfg.A_MAX_FINGER);
      HAL_Delay(cfg.DELAY_US_AFTER_FINGER_LOCK);
-    // å¯¹ä¾§æ‰‹æŒ‡æ¾å¼€
+    // ¶Ô²àÊÖÖ¸ËÉ¿ª
     move_finger_block(!lr, cfg.FINGER_OFFSET_MAX, cfg.V_START_FINGER, cfg.V_MAX_FINGER, cfg.A_MAX_FINGER);
-    // è½¬90
+    // ×ª90
     move_arm_block(lr, dir * 100, cfg.V_START_ARM_L, cfg.V_MAX_ARM_L, cfg.A_MAX_ARM_L);
     if(!skip_back_step)
     {
-        // æ‰‹æŒ‡å½’ä½
+        // ÊÖÖ¸¹éÎ»
         move_finger_block(!lr, cfg.FINGER_OFFSET_SPIN, cfg.V_START_FINGER, cfg.V_MAX_FINGER, cfg.A_MAX_FINGER);
         move_finger_block(!lr, cfg.FINGER_OFFSET_LOCK, cfg.V_START_FINGER, cfg.V_MAX_FINGER, cfg.A_MAX_FINGER);
          HAL_Delay(cfg.DELAY_US_AFTER_FINGER_LOCK);
         move_finger_block(lr, cfg.FINGER_OFFSET_MAX, cfg.V_START_FINGER, cfg.V_MAX_FINGER, cfg.A_MAX_FINGER);
-        // è½¬90åº¦
+        // ×ª90¶È
         move_arm_block(lr, dir * 100, cfg.V_START_ARM, cfg.V_MAX_ARM, cfg.A_MAX_ARM);
     }
-    // æ‰‹æŒ‡ç¼©å›
+    // ÊÖÖ¸Ëõ»Ø
     move_finger_block(lr, cfg.FINGER_OFFSET_SPIN, cfg.V_START_FINGER, cfg.V_MAX_FINGER, cfg.A_MAX_FINGER);
-    // å¯¹ä¾§æ‰‹æŒ‡ç¼©å›
+    // ¶Ô²àÊÖÖ¸Ëõ»Ø
     move_finger_block(!lr, cfg.FINGER_OFFSET_SPIN, cfg.V_START_FINGER, cfg.V_MAX_FINGER, cfg.A_MAX_FINGER);
 }
 
@@ -823,8 +823,8 @@ static void app_load_default_config(void)
     cfg.FINGER_OFFSET_SPIN = 230 - 4;
     cfg.FINGER_OFFSET_INIT = 230;
     cfg.FINGER_OFFSET_MAX = 400;
-    cfg.IRUN = 24;  // IRUNå³°å€¼1.17A
-    cfg.IHOLD = 13; // IHOLDå³°å€¼0.66A
+    cfg.IRUN = 24;  // IRUN·åÖµ1.17A
+    cfg.IHOLD = 13; // IHOLD·åÖµ0.66A
     cfg.SGTHRS = 105;
     cfg.DEBUG_MODE = 0;
     cfg.date[254] = FLASH_CONFIG_VERSION;
