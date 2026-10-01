@@ -8,9 +8,8 @@
 - `Core/Inc`: 应用和外设头文件。
 - `Core/Src`: 应用入口、外设初始化和中断处理。
 - `Drivers`: STM32 HAL、CMSIS 驱动库。
-- `MDK-ARM`: Keil 工程文件和构建输出。
-- `USB_DEVICE`: USB CDC 相关 CubeMX 代码。
-- `tools`: nr_micro_shell 和 ANSI 辅助代码。
+- `MDK-ARM`: Keil 工程文件（构建输出 `MDK-ARM/001/` 已被 `.gitignore` 忽略）。
+- `tools`: nr_micro_shell 和 ANSI 辅助代码（参与编译，但 `main.c` 目前没有调用）。
 
 ## 主要入口
 
@@ -39,13 +38,17 @@
 MDK-ARM/001.uvprojx
 ```
 
-然后选择工程目标并执行 Build。工程依赖的 HAL/CMSIS 源码已经包含在当前目录中。
+然后选择工程目标并执行 Build。HAL 源码已包含在 `Drivers` 中，CMSIS Core 通过 RTE 引用，需要在 Pack Installer 中安装 `Keil::STM32F4xx_DFP` 和 `ARM::CMSIS`。
+
+已验证环境：MDK 5.43、ARMCC 5.06 update 5、CMSIS 6.3.0、STM32F4xx_DFP 3.1.1。
 
 ## 注意事项
 
 - `Core/Src/main.c` 保留了 CubeMX 的 `USER CODE` 区域，后续用 CubeMX 重新生成代码时，应确认用户代码没有被覆盖。
 - 默认运动参数集中在 `app_load_default_config()` 中，调速度、加速度、夹爪行程时优先修改这里。
 - 定时器与电机通道的对应关系集中在 `stepper_channels` 表中，修改硬件映射时优先检查该表和 `Core/Inc/main.h` 中的引脚宏。
+- `flag0~3`、`allow[]` 在定时器中断里修改、在主循环里轮询，必须保持 `volatile`。工程使用 -O3，去掉后阻塞运动会卡死。
+- 源码中文注释是 GBK 编码，与 Keil 的 code page 936 一致；用 VS Code 等编辑器打开时请选择 GBK。
 
 ## 参考项目
 
