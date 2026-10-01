@@ -13,6 +13,10 @@ MDK-ARM/**/*.dep
 MDK-ARM/**/*.iex
 MDK-ARM/**/*.Bak
 
+# STM32CubeMX regeneration backups
+Core/Src/Backup/
+Core/Inc/Backup/
+
 # User-local IDE files
 MDK-ARM/*.uvguix.*
 
