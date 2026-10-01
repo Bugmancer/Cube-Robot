@@ -48,8 +48,8 @@ typedef struct stepper_channel_t
     uint32_t channel;
     GPIO_TypeDef *dir_port;
     uint16_t dir_pin;
-    int *busy_flag;
-    int *enable_flag;
+    volatile int *busy_flag;
+    volatile int *enable_flag;
 } stepper_channel;
 /* USER CODE END PTD */
 
@@ -61,16 +61,18 @@ float accel_factor = 0.2f;
 int finger_pos[2];
 int exit_debug_mode = 0;
 g_config cfg;
-int flag0;
-int flag1;
-int flag2;
-int flag3;
+// flag0~3 和 allow 在定时器中断里修改、在主循环里轮询，必须是 volatile，
+// 否则 -O3 下 stepper_wait_all_done() 只读一次标志位，第一次阻塞运动就会死循环。
+volatile int flag0;
+volatile int flag1;
+volatile int flag2;
+volatile int flag3;
 int test;
 int test1;
 int test2;
 int test3;
 int test4 = 0;
-int allow[4] = {0, 0, 0, 0};
+volatile int allow[4] = {0, 0, 0, 0};
 
 static step_ctrl stepper_ctrl[4] = {0};
 
